@@ -21,6 +21,7 @@ export default function OrganizationsPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
+    nit: '',
     name: '',
     address: '',
     phone: '',
@@ -39,6 +40,7 @@ export default function OrganizationsPage() {
     if (searchTerm) {
       filtered = filtered.filter(org =>
         org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        org.nit.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (org.address && org.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (org.phone && org.phone.toLowerCase().includes(searchTerm.toLowerCase()))
       );
@@ -64,6 +66,7 @@ export default function OrganizationsPage() {
   const handleCreate = () => {
     setEditingOrganization(null);
     setFormData({
+      nit: '',
       name: '',
       address: '',
       phone: '',
@@ -75,6 +78,7 @@ export default function OrganizationsPage() {
   const handleEdit = (organization: Organization) => {
     setEditingOrganization(organization);
     setFormData({
+      nit: organization.nit,
       name: organization.name,
       address: organization.address || '',
       phone: organization.phone || '',
@@ -215,7 +219,7 @@ export default function OrganizationsPage() {
         {/* Organizations Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredOrganizations.map((org) => (
-            <div key={org.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+            <div key={org.id || `org-${org.nit}`} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
               {/* Photo */}
               <div className="h-48 bg-gradient-to-br from-[#FFD369] to-[#FFD369]/80 relative overflow-hidden">
                 {org.photoURL ? (
@@ -238,6 +242,7 @@ export default function OrganizationsPage() {
               {/* Content */}
               <div className="p-6">
                 <h3 className="text-xl font-bold text-[#222831] mb-2 line-clamp-2">{org.name}</h3>
+                <p className="text-sm text-gray-600 mb-3 font-medium">NIT: {org.nit}</p>
                 
                 {org.address && (
                   <div className="flex items-start gap-2 mb-3">
@@ -306,6 +311,21 @@ export default function OrganizationsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-black mb-2">
+                      NIT *
+                    </label>
+                    <input
+                      type="text"
+                      name="nit"
+                      value={formData.nit}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="Ej: 12345678-9"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFD369] focus:border-transparent transition-all duration-300 text-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-2">
                       Nombre *
                     </label>
                     <input
@@ -317,7 +337,9 @@ export default function OrganizationsPage() {
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFD369] focus:border-transparent transition-all duration-300 text-black"
                     />
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-black mb-2">
                       Teléfono
@@ -327,6 +349,20 @@ export default function OrganizationsPage() {
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFD369] focus:border-transparent transition-all duration-300 text-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-2">
+                      URL de Foto
+                    </label>
+                    <input
+                      type="url"
+                      name="photoURL"
+                      value={formData.photoURL}
+                      onChange={handleInputChange}
+                      placeholder="https://ejemplo.com/foto.jpg"
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFD369] focus:border-transparent transition-all duration-300 text-black"
                     />
                   </div>
@@ -341,20 +377,6 @@ export default function OrganizationsPage() {
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFD369] focus:border-transparent transition-all duration-300 text-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-black mb-2">
-                    URL de Foto
-                  </label>
-                  <input
-                    type="url"
-                    name="photoURL"
-                    value={formData.photoURL}
-                    onChange={handleInputChange}
-                    placeholder="https://ejemplo.com/foto.jpg"
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFD369] focus:border-transparent transition-all duration-300 text-black"
                   />
                 </div>

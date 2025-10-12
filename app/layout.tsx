@@ -33,7 +33,9 @@ export default function RootLayout({
             isCollapsed={sidebarCollapsed} 
             onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
           />
-          <main className="flex-1 overflow-hidden">
+          <main className={`flex-1 overflow-y-auto transition-all duration-300 ${
+            sidebarCollapsed ? 'ml-16' : 'ml-64'
+          }`}>
             {children}
           </main>
         </div>
