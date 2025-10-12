@@ -1,3 +1,9 @@
+## Docker Command
+
+docker build -t drimsoft-ui .
+docker run -p 3000:3000 drimsoft-ui
+
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
