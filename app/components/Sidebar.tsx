@@ -68,7 +68,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   return (
     <div className={`bg-gradient-to-b from-[#222831] to-[#1a1f26] text-white transition-all duration-300 ${
       isCollapsed ? 'w-16' : 'w-64'
-    } min-h-screen flex flex-col shadow-2xl`}>
+    } h-screen flex flex-col shadow-2xl fixed left-0 top-0 z-10`}>
       {/* Header */}
       <div className="p-4 border-b border-gray-700">
         <div className="flex items-center justify-between">

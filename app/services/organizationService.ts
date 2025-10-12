@@ -2,6 +2,7 @@ const API_BASE_URL = 'http://localhost:8080/api/v1';
 
 export interface Organization {
   id?: number;
+  nit: string;
   name: string;
   address?: string;
   phone?: string;
@@ -10,6 +11,7 @@ export interface Organization {
 }
 
 export interface CreateOrganizationRequest {
+  nit: string;
   name: string;
   address?: string;
   phone?: string;
@@ -17,6 +19,7 @@ export interface CreateOrganizationRequest {
 }
 
 export interface UpdateOrganizationRequest {
+  nit: string;
   name: string;
   address?: string;
   phone?: string;
