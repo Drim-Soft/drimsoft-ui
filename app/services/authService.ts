@@ -26,7 +26,7 @@ const getFriendlyErrorMessage = (error: any, status?: number): string => {
     return 'No se puede conectar con el servidor. Verifica tu conexión a internet.';
   }
 
-  if (error?.message?.includes('localhost:8080')) {
+  if (error?.message?.includes('localhost:8080') || error?.message?.includes('/api/')) {
     return 'El servidor no está disponible. Contacta al administrador del sistema.';
   }
 

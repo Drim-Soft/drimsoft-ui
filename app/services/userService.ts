@@ -22,8 +22,19 @@ const getFriendlyErrorMessage = (error: any, context: string = 'operación'): st
     return 'No se puede conectar con el servidor. Verifica tu conexión a internet.';
   }
 
-  if (error?.message?.includes('localhost:8080')) {
+  if (error?.message?.includes('localhost:8080') || error?.message?.includes('/api/')) {
     return 'El servidor no está disponible. Contacta al administrador del sistema.';
+  }
+
+  // Errores de permisos específicos
+  if (error?.message?.includes('403') || error?.message?.includes('Forbidden')) {
+    if (context.includes('asignar rol')) {
+      return 'No tienes permisos para cambiar roles de usuario. Contacta al administrador.';
+    }
+    if (context.includes('actualizar estado')) {
+      return 'No tienes permisos para cambiar el estado de usuario. Contacta al administrador.';
+    }
+    return 'No tienes permisos para realizar esta operación. Contacta al administrador.';
   }
 
   // Errores de Supabase específicos
@@ -63,7 +74,21 @@ export const userService = {
       throw new Error(friendlyMessage);
     }
 
-    return response.json();
+    const users = await response.json();
+    
+    // Mapear las propiedades del backend al frontend
+    return users.map((user: any) => ({
+      ...user,
+      id: user.idUser, // Mapear idUser a id
+      role: {
+        ...user.role,
+        id: user.role.idRole // Mapear idRole a id
+      },
+      status: {
+        ...user.status,
+        id: user.status.idUserStatus // Mapear idUserStatus a id
+      }
+    }));
   },
 
   // Obtener usuario por ID
@@ -83,7 +108,21 @@ export const userService = {
       throw new Error(friendlyMessage);
     }
 
-    return response.json();
+    const user = await response.json();
+    
+    // Mapear las propiedades del backend al frontend
+    return {
+      ...user,
+      id: user.idUser, // Mapear idUser a id
+      role: {
+        ...user.role,
+        id: user.role.idRole // Mapear idRole a id
+      },
+      status: {
+        ...user.status,
+        id: user.status.idUserStatus // Mapear idUserStatus a id
+      }
+    };
   },
 
   // Crear usuario (registro en Supabase + creación en BD)
@@ -224,19 +263,67 @@ export const userService = {
     const token = localStorage.getItem('authToken');
     if (!token) throw new Error('No autenticado');
 
-    const response = await fetch(`${API_BASE_URL}/users/${userId}/roles/${roleId}`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+      console.log('Asignando rol usando endpoint PUT:', { userId, roleId });
+      
+      // Obtener el usuario actual primero
+      const currentUser = await this.getUserById(userId);
+      
+      // Crear un objeto con el nuevo rol
+      const updatedUser = {
+        ...currentUser,
+        role: { id: roleId, name: roleId === 1 ? 'Administrador' : 'Drimsoft Team' }
+      };
+      
+      const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedUser),
+      });
 
-    if (!response.ok) {
-      throw new Error('Error al asignar rol');
+      if (!response.ok) {
+        let errorMessage = 'Error al asignar rol';
+        let errorData = null;
+        
+        try {
+          const responseText = await response.text();
+          console.log('Raw response text:', responseText);
+          
+          if (responseText) {
+            errorData = JSON.parse(responseText);
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          }
+        } catch (e) {
+          console.log('Could not parse error response as JSON:', e);
+          errorMessage = `Error ${response.status}: ${response.statusText}`;
+        }
+        
+        console.error('Error completo en assignRole:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorMessage,
+          errorData,
+          userId,
+          roleId,
+          url: `${API_BASE_URL}/users/${userId}/roles/${roleId}`,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+        
+        const friendlyMessage = getFriendlyErrorMessage(errorMessage, 'asignar rol');
+        throw new Error(friendlyMessage);
+      }
+
+      return response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      const friendlyMessage = getFriendlyErrorMessage(error, 'asignar rol');
+      throw new Error(friendlyMessage);
     }
-
-    return response.json();
   },
 
   // Actualizar estado de usuario
@@ -244,19 +331,57 @@ export const userService = {
     const token = localStorage.getItem('authToken');
     if (!token) throw new Error('No autenticado');
 
-    const response = await fetch(`${API_BASE_URL}/users/${userId}/status/${statusId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+      console.log('Actualizando estado:', { userId, statusId });
+      
+      // Si es estado 3 (eliminado), usar el endpoint DELETE que sabemos que funciona
+      if (statusId === 3) {
+        console.log('Usando endpoint DELETE para estado eliminado');
+        return await this.deleteUser(userId);
+      }
+      
+      // Para otros estados, usar el endpoint PUT original
+      console.log('Usando endpoint PUT para estado:', statusId);
+      
+      const response = await fetch(`${API_BASE_URL}/users/${userId}/status/${statusId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+        credentials: 'include',
+      });
 
-    if (!response.ok) {
-      throw new Error('Error al actualizar estado');
+      if (!response.ok) {
+        let errorMessage = 'Error al actualizar estado';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+          errorMessage = `Error ${response.status}: ${response.statusText}`;
+        }
+        
+        console.error('Error en updateUserStatus:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorMessage,
+          userId,
+          statusId
+        });
+        
+        const friendlyMessage = getFriendlyErrorMessage(errorMessage, 'actualizar estado');
+        throw new Error(friendlyMessage);
+      }
+
+      return response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      const friendlyMessage = getFriendlyErrorMessage(error, 'actualizar estado');
+      throw new Error(friendlyMessage);
     }
-
-    return response.json();
   },
 
   // Obtener roles disponibles
@@ -275,4 +400,5 @@ export const userService = {
       { id: USER_STATUS.DELETED, name: 'Eliminado' },
     ];
   },
+
 };

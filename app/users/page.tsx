@@ -6,6 +6,7 @@ import { UserDrimsoft } from '../types/user';
 import { Button } from '../components/button';
 import { Card } from '../components/card';
 import CreateUserForm from '../components/CreateUserForm';
+import EditUserForm from '../components/EditUserForm';
 import UsersTable from '../components/UsersTable';
 import { Plus, Users, AlertCircle } from 'lucide-react';
 
@@ -13,6 +14,8 @@ export default function UsersPage() {
   const [users, setUsers] = useState<UserDrimsoft[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserDrimsoft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -26,6 +29,10 @@ export default function UsersPage() {
       setIsLoading(true);
       setError(null);
       const usersData = await userService.getAllUsers();
+      console.log('Usuarios cargados:', usersData);
+      if (usersData.length > 0) {
+        console.log('Primer usuario:', usersData[0]);
+      }
       setUsers(usersData);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Error al cargar usuarios');
@@ -44,8 +51,23 @@ export default function UsersPage() {
   };
 
   const handleEditUser = (user: UserDrimsoft) => {
-    // TODO: Implementar edición de usuario
-    console.log('Editar usuario:', user);
+    setSelectedUser(user);
+    setShowEditForm(true);
+  };
+
+  const handleEditSuccess = async () => {
+    setShowEditForm(false);
+    setSelectedUser(null);
+    setSuccessMessage('Usuario actualizado exitosamente');
+    await loadUsers();
+    
+    // Limpiar mensaje después de 3 segundos
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  const handleEditCancel = () => {
+    setShowEditForm(false);
+    setSelectedUser(null);
   };
 
   const handleDeleteUser = async (userId: number) => {
@@ -126,6 +148,14 @@ export default function UsersPage() {
           isOpen={showCreateForm}
           onSuccess={handleCreateUser}
           onCancel={() => setShowCreateForm(false)}
+        />
+
+        {/* Formulario de edición */}
+        <EditUserForm
+          isOpen={showEditForm}
+          user={selectedUser}
+          onSuccess={handleEditSuccess}
+          onCancel={handleEditCancel}
         />
 
 
