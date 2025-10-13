@@ -10,6 +10,41 @@ import {
 
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
+// Función para convertir errores técnicos en mensajes amigables para el usuario
+const getFriendlyErrorMessage = (error: any, context: string = 'operación'): string => {
+  // Si ya es un mensaje amigable, devolverlo tal como está
+  if (typeof error === 'string' && !error.includes('Error del servidor') && !error.includes('fetch')) {
+    return error;
+  }
+
+  // Errores de red
+  if (error?.message?.includes('fetch') || error?.message?.includes('NetworkError')) {
+    return 'No se puede conectar con el servidor. Verifica tu conexión a internet.';
+  }
+
+  if (error?.message?.includes('localhost:8080')) {
+    return 'El servidor no está disponible. Contacta al administrador del sistema.';
+  }
+
+  // Errores de Supabase específicos
+  if (error?.message?.includes('Supabase') || error?.message?.includes('supabase.co')) {
+    return 'Error de autenticación. El usuario puede no estar confirmado.';
+  }
+
+  // Errores de parsing JSON
+  if (error?.message?.includes('JSON') || error?.message?.includes('parse')) {
+    return 'Error de comunicación con el servidor. Intenta nuevamente.';
+  }
+
+  // Errores de respuesta vacía
+  if (error?.message?.includes('respuesta vacía')) {
+    return 'El servidor no respondió correctamente. Intenta nuevamente.';
+  }
+
+  // Mensaje genérico para errores no identificados
+  return `Error al ${context}. Intenta nuevamente.`;
+};
+
 export const userService = {
   // Obtener todos los usuarios
   async getAllUsers(): Promise<UserDrimsoft[]> {
@@ -24,7 +59,8 @@ export const userService = {
     });
 
     if (!response.ok) {
-      throw new Error('Error al obtener usuarios');
+      const friendlyMessage = getFriendlyErrorMessage('Error al obtener usuarios', 'cargar usuarios');
+      throw new Error(friendlyMessage);
     }
 
     return response.json();
@@ -43,7 +79,8 @@ export const userService = {
     });
 
     if (!response.ok) {
-      throw new Error('Error al obtener usuario');
+      const friendlyMessage = getFriendlyErrorMessage('Error al obtener usuario', 'cargar usuario');
+      throw new Error(friendlyMessage);
     }
 
     return response.json();
@@ -61,6 +98,8 @@ export const userService = {
 
     try {
       // 1. Registrar usuario en Supabase
+      console.log('Creando usuario en Supabase:', { email: userData.email });
+      
       const signUpResponse = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: {
@@ -72,6 +111,8 @@ export const userService = {
         }),
       });
 
+      console.log('Respuesta del signup:', { status: signUpResponse.status, statusText: signUpResponse.statusText });
+
       if (!signUpResponse.ok) {
         let errorMessage = 'Error al crear cuenta en Supabase';
         try {
@@ -81,7 +122,8 @@ export const userService = {
           // Si no se puede parsear el error, usar el status text
           errorMessage = `Error ${signUpResponse.status}: ${signUpResponse.statusText}`;
         }
-        throw new Error(errorMessage);
+        const friendlyMessage = getFriendlyErrorMessage(errorMessage, 'crear cuenta');
+        throw new Error(friendlyMessage);
       }
 
       const signUpData = await signUpResponse.json();
@@ -99,7 +141,8 @@ export const userService = {
 
       if (!supabaseUserId) {
         console.error('Estructura de respuesta inesperada:', signUpData);
-        throw new Error('No se pudo obtener el ID de Supabase. Estructura de respuesta: ' + JSON.stringify(signUpData));
+        const friendlyMessage = getFriendlyErrorMessage('No se pudo obtener el ID de Supabase', 'crear usuario');
+        throw new Error(friendlyMessage);
       }
 
       // 2. Crear usuario en la base de datos
@@ -125,7 +168,8 @@ export const userService = {
         } catch (e) {
           errorMessage = `Error ${userResponse.status}: ${userResponse.statusText}`;
         }
-        throw new Error(errorMessage);
+        const friendlyMessage = getFriendlyErrorMessage(errorMessage, 'crear usuario');
+        throw new Error(friendlyMessage);
       }
 
       return userResponse.json();

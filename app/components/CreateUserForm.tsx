@@ -5,15 +5,16 @@ import { userService } from '../services/userService';
 import { CreateUserRequest, Role, UserStatus } from '../types/user';
 import { Button } from './button';
 import { Input } from './input';
-import { Card } from './card';
+import Modal from './Modal';
 import { Eye, EyeOff, User, Mail, Lock, Shield, UserCheck } from 'lucide-react';
 
 interface CreateUserFormProps {
+  isOpen: boolean;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export default function CreateUserForm({ onSuccess, onCancel }: CreateUserFormProps) {
+export default function CreateUserForm({ isOpen, onSuccess, onCancel }: CreateUserFormProps) {
   const [formData, setFormData] = useState<CreateUserRequest>({
     name: '',
     email: '',
@@ -89,9 +90,8 @@ export default function CreateUserForm({ onSuccess, onCancel }: CreateUserFormPr
   };
 
   return (
-    <Card className="p-6 max-w-2xl mx-auto bg-white border border-gray-200 shadow-sm">
+    <Modal isOpen={isOpen} onClose={onCancel} title="Crear Nuevo Usuario">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Crear Nuevo Usuario</h2>
         <p className="text-gray-600">Complete la información para crear un nuevo usuario y su cuenta</p>
       </div>
 
@@ -246,16 +246,15 @@ export default function CreateUserForm({ onSuccess, onCancel }: CreateUserFormPr
         <div className="flex gap-3 pt-4">
           <Button
             type="button"
-            variant="outline"
             onClick={onCancel}
-            className="flex-1"
+            className="flex-1 bg-gray-200 hover:bg-red-500 text-gray-700 hover:text-white transition-colors duration-200"
             disabled={isLoading}
           >
             Cancelar
           </Button>
           <Button
             type="submit"
-            className="flex-1 bg-gray-800 hover:bg-gray-900 text-white"
+            className="flex-1 bg-gray-800 hover:bg-gray-900 text-white transition-colors duration-200"
             disabled={isLoading}
           >
             {isLoading ? (
@@ -272,6 +271,6 @@ export default function CreateUserForm({ onSuccess, onCancel }: CreateUserFormPr
           </Button>
         </div>
       </form>
-    </Card>
+    </Modal>
   );
 }

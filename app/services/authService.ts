@@ -1,17 +1,96 @@
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
+// Función para convertir errores técnicos en mensajes amigables para el usuario
+const getFriendlyErrorMessage = (error: any, status?: number): string => {
+  // Si ya es un mensaje amigable, devolverlo tal como está
+  if (typeof error === 'string' && !error.includes('Error del servidor') && !error.includes('fetch')) {
+    return error;
+  }
+
+  // Mensajes específicos por código de estado
+  switch (status) {
+    case 401:
+      return 'Credenciales incorrectas. Verifica tu email y contraseña.';
+    case 403:
+      return 'No tienes permisos para acceder. Contacta al administrador.';
+    case 404:
+      return 'Usuario no encontrado. Verifica tu email.';
+    case 500:
+      return 'Error del servidor. Intenta nuevamente en unos minutos.';
+    case 503:
+      return 'Servicio temporalmente no disponible. Intenta más tarde.';
+  }
+
+  // Errores de red
+  if (error?.message?.includes('fetch') || error?.message?.includes('NetworkError')) {
+    return 'No se puede conectar con el servidor. Verifica tu conexión a internet.';
+  }
+
+  if (error?.message?.includes('localhost:8080')) {
+    return 'El servidor no está disponible. Contacta al administrador del sistema.';
+  }
+
+  // Errores de Supabase específicos
+  if (error?.message?.includes('Supabase') || error?.message?.includes('supabase.co')) {
+    return 'Error de autenticación. El usuario puede no estar confirmado.';
+  }
+
+  // Errores de parsing JSON
+  if (error?.message?.includes('JSON') || error?.message?.includes('parse')) {
+    return 'Error de comunicación con el servidor. Intenta nuevamente.';
+  }
+
+  // Errores de respuesta vacía
+  if (error?.message?.includes('respuesta vacía')) {
+    return 'El servidor no respondió correctamente. Intenta nuevamente.';
+  }
+
+  // Mensaje genérico para errores no identificados
+  return 'Error al iniciar sesión. Verifica tus credenciales e intenta nuevamente.';
+};
+
 export const authService = {
   async login(email: string, password: string) {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+    console.log('Intentando login con:', { email });
+    console.log('URL del backend:', `${API_BASE_URL}/auth/login`);
+    
+    // Verificar si el backend está disponible
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+    console.log('Respuesta del login:', { 
+      status: response.status, 
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries())
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      const responseText = await response.text();
+      console.log('Respuesta raw del servidor:', responseText);
+      
+      if (responseText.trim() === '') {
+        const friendlyMessage = getFriendlyErrorMessage({ message: 'El servidor devolvió una respuesta vacía' });
+        throw new Error(friendlyMessage);
+      }
+      
+      data = JSON.parse(responseText);
+      console.log('Datos parseados:', data);
+    } catch (parseError) {
+      console.error('Error al parsear respuesta JSON:', parseError);
+      const friendlyMessage = getFriendlyErrorMessage(parseError);
+      throw new Error(friendlyMessage);
+    }
 
     if (!response.ok) {
-      throw new Error(data.error || 'Error al iniciar sesión');
+      console.error('Error en login - Status:', response.status, 'Data:', data);
+      const technicalError = data?.error || data?.message || `Error del servidor (${response.status}: ${response.statusText})`;
+      const friendlyMessage = getFriendlyErrorMessage(technicalError, response.status);
+      throw new Error(friendlyMessage);
     }
 
     const token = data.access_token;
@@ -41,6 +120,11 @@ export const authService = {
     }
 
     return data;
+    } catch (networkError) {
+      console.error('Error de red al intentar login:', networkError);
+      const friendlyMessage = getFriendlyErrorMessage(networkError);
+      throw new Error(friendlyMessage);
+    }
   },
 
   async getUser() {

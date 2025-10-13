@@ -122,12 +122,12 @@ export default function UsersPage() {
         )}
 
         {/* Formulario de creación */}
-        {showCreateForm && (
-          <CreateUserForm
-            onSuccess={handleCreateUser}
-            onCancel={() => setShowCreateForm(false)}
-          />
-        )}
+        <CreateUserForm
+          isOpen={showCreateForm}
+          onSuccess={handleCreateUser}
+          onCancel={() => setShowCreateForm(false)}
+        />
+
 
         {/* Tabla de usuarios */}
         <UsersTable
