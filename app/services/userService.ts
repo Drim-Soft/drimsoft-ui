@@ -264,24 +264,34 @@ export const userService = {
     if (!token) throw new Error('No autenticado');
 
     try {
-      console.log('Asignando rol usando endpoint PUT:', { userId, roleId });
+      console.log('Asignando rol usando endpoint PUT con usuario completo:', { userId, roleId });
       
       // Obtener el usuario actual primero
       const currentUser = await this.getUserById(userId);
+      console.log('Usuario actual obtenido:', currentUser);
       
-      // Crear un objeto con el nuevo rol
-      const updatedUser = {
-        ...currentUser,
-        role: { id: roleId, name: roleId === 1 ? 'Administrador' : 'Drimsoft Team' }
+      // Crear un objeto con el usuario completo pero solo el rol modificado
+      const userUpdate = {
+        idUser: currentUser.idUser,
+        name: currentUser.name,
+        supabaseUserId: currentUser.supabaseUserId,
+        role: { 
+          idRole: roleId, 
+          name: roleId === 1 ? 'Administrador' : 'Drimsoft Team' 
+        },
+        status: currentUser.status
       };
       
+      console.log('Usuario a enviar:', userUpdate);
+      
+      // Usar el endpoint PUT que sabemos que funciona
       const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updatedUser),
+        body: JSON.stringify(userUpdate),
       });
 
       if (!response.ok) {
@@ -316,7 +326,29 @@ export const userService = {
         throw new Error(friendlyMessage);
       }
 
-      return response.json();
+      const result = await response.json();
+      console.log('Respuesta del backend:', result);
+      
+      // Mapear la respuesta del backend al formato del frontend
+      const mappedResult = {
+        id: result.idUser, // Mapear idUser a id
+        idUser: result.idUser, // Mantener idUser para compatibilidad
+        name: result.name,
+        supabaseUserId: result.supabaseUserId,
+        role: {
+          id: result.role.idRole, // Mapear idRole a id
+          idRole: result.role.idRole, // Mantener idRole para compatibilidad
+          name: result.role.name
+        },
+        status: {
+          id: result.status.idUserStatus, // Mapear idUserStatus a id
+          idUserStatus: result.status.idUserStatus, // Mantener idUserStatus para compatibilidad
+          name: result.status.name
+        }
+      };
+      
+      console.log('Usuario mapeado:', mappedResult);
+      return mappedResult;
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -374,7 +406,27 @@ export const userService = {
         throw new Error(friendlyMessage);
       }
 
-      return response.json();
+      const result = await response.json();
+      
+      // Mapear la respuesta del backend al formato del frontend
+      const mappedResult = {
+        id: result.idUser, // Mapear idUser a id
+        idUser: result.idUser, // Mantener idUser para compatibilidad
+        name: result.name,
+        supabaseUserId: result.supabaseUserId,
+        role: {
+          id: result.role.idRole, // Mapear idRole a id
+          idRole: result.role.idRole, // Mantener idRole para compatibilidad
+          name: result.role.name
+        },
+        status: {
+          id: result.status.idUserStatus, // Mapear idUserStatus a id
+          idUserStatus: result.status.idUserStatus, // Mantener idUserStatus para compatibilidad
+          name: result.status.name
+        }
+      };
+      
+      return mappedResult;
     } catch (error) {
       if (error instanceof Error) {
         throw error;
