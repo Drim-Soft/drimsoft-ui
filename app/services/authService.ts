@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.DRIMSOFT_API_BASE_URL;
+const API_BASE_URL = process.env.NEXT_PUBLIC_DRIMSOFT_API_BASE_URL;
 
 // Función para convertir errores técnicos en mensajes amigables para el usuario
 const getFriendlyErrorMessage = (error: any, status?: number): string => {
