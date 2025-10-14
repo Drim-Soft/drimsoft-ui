@@ -31,13 +31,13 @@ export default function EditUserForm({ isOpen, user, onSuccess, onCancel }: Edit
     
     if (user && isOpen) {
       console.log('Cargando datos del usuario:', {
-        userId: user.id,
+        userId: user.idUser,
         roleId: user.role?.id,
         userStatusId: user.status?.id,
         user: user
       });
       
-      if (!user.id) {
+      if (!user.idUser) {
         console.error('Usuario sin ID:', user);
         return;
       }
@@ -60,11 +60,11 @@ export default function EditUserForm({ isOpen, user, onSuccess, onCancel }: Edit
 
     console.log('Validando formulario con datos:', formData);
 
-    if (formData.roleId === null || formData.roleId === undefined || formData.roleId === '') {
+    if (formData.roleId === null || formData.roleId === undefined || formData.roleId === 0) {
       newErrors.roleId = 'El rol es requerido';
     }
 
-    if (formData.userStatusId === null || formData.userStatusId === undefined || formData.userStatusId === '') {
+    if (formData.userStatusId === null || formData.userStatusId === undefined || formData.userStatusId === 0) {
       newErrors.userStatusId = 'El estado es requerido';
     }
 
@@ -83,7 +83,7 @@ export default function EditUserForm({ isOpen, user, onSuccess, onCancel }: Edit
       return;
     }
     
-    if (!user.id) {
+    if (!user.idUser) {
       console.error('Usuario sin ID:', user);
       return;
     }
@@ -103,7 +103,7 @@ export default function EditUserForm({ isOpen, user, onSuccess, onCancel }: Edit
     
     try {
       console.log('Iniciando actualización de usuario:', {
-        userId: user.id,
+        userId: user.idUser,
         currentRole: user.role?.id,
         newRole: formData.roleId,
         currentStatus: user.status?.id,
@@ -113,14 +113,14 @@ export default function EditUserForm({ isOpen, user, onSuccess, onCancel }: Edit
       // Actualizar rol si cambió
       if (formData.roleId !== user.role.id) {
         console.log('Actualizando rol...');
-        await userService.assignRole(user.id, formData.roleId);
+        await userService.assignRole(user.idUser, formData.roleId);
         console.log('Rol actualizado exitosamente');
       }
 
       // Actualizar estado si cambió
       if (formData.userStatusId !== user.status.id) {
         console.log('Actualizando estado...');
-        await userService.updateUserStatus(user.id, formData.userStatusId);
+        await userService.updateUserStatus(user.idUser, formData.userStatusId);
         console.log('Estado actualizado exitosamente');
       }
 
@@ -157,7 +157,7 @@ export default function EditUserForm({ isOpen, user, onSuccess, onCancel }: Edit
           </div>
           <div>
             <h3 className="text-lg font-semibold text-gray-900">{user.name}</h3>
-            <p className="text-sm text-gray-600">{user.email}</p>
+            {/* <p className="text-sm text-gray-600">{user.email}</p> */}
           </div>
         </div>
         <p className="text-gray-600">Modifica el rol y estado del usuario</p>
@@ -244,9 +244,9 @@ export default function EditUserForm({ isOpen, user, onSuccess, onCancel }: Edit
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Email
               </label>
-              <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-600">
+              {/* <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-600">
                 {user.email}
-              </div>
+              </div> */}
               <p className="text-xs text-gray-500 mt-1">No se puede modificar</p>
             </div>
           </div>

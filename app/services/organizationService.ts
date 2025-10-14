@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const API_BASE_URL = process.env.DRIMSOFT_API_BASE_URL;
 
 export interface Organization {
   id?: number;

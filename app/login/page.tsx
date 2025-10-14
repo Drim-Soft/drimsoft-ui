@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../../hooks/useAuth';
 import { Mail, Lock } from 'lucide-react';
 import { Button } from '../components/button';
 import { Input } from '../components/input';

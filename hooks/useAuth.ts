@@ -2,7 +2,7 @@
 // Keeping this file for backward compatibility during migration.
 
 'use client';
-import { useAuth as useAuthProvider } from '../components/AuthProvider';
+import { useAuth as useAuthProvider } from '../app/components/AuthProvider';
 
 export function useAuth() {
   return useAuthProvider();

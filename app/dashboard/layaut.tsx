@@ -1,5 +1,5 @@
 'use client';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../../hooks/useAuth';
 import Sidebar from '../components/Sidebar';
 import { useState } from 'react';
 

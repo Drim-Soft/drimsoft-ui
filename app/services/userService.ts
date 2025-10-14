@@ -8,7 +8,7 @@ import {
   USER_STATUS
 } from '../types/user';
 
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const API_BASE_URL = process.env.DRIMSOFT_API_BASE_URL;
 
 // Función para convertir errores técnicos en mensajes amigables para el usuario
 const getFriendlyErrorMessage = (error: any, context: string = 'operación'): string => {
