@@ -64,6 +64,7 @@ export const userService = {
 
     const response = await fetch(`${API_BASE_URL}/users`, {
       headers: {
+        'ngrok-skip-browser-warning' : 'true',
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
@@ -100,6 +101,7 @@ export const userService = {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning' : 'true',
       },
     });
 
@@ -143,6 +145,7 @@ export const userService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning' : 'true',
         },
         body: JSON.stringify({
           email: userData.email,
@@ -190,6 +193,7 @@ export const userService = {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning' : 'true',
         },
         body: JSON.stringify({
           name: userData.name,
@@ -227,6 +231,7 @@ export const userService = {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning' : 'true',
       },
       body: JSON.stringify(userData),
     });
@@ -248,6 +253,7 @@ export const userService = {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning' : 'true',
       },
     });
 
@@ -290,6 +296,7 @@ export const userService = {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning' : 'true',
         },
         body: JSON.stringify(userUpdate),
       });
@@ -380,6 +387,7 @@ export const userService = {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning' : 'true',
         },
         mode: 'cors',
         credentials: 'include',

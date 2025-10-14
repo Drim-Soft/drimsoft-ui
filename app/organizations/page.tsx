@@ -21,10 +21,12 @@ export default function OrganizationsPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
+    nit: '',
     name: '',
     address: '',
     phone: '',
-    photoURL: ''
+    photoURL: '',
+    domain: ''
   });
 
   // Load organizations on component mount
@@ -39,8 +41,10 @@ export default function OrganizationsPage() {
     if (searchTerm) {
       filtered = filtered.filter(org =>
         org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        org.nit.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (org.address && org.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (org.phone && org.phone.toLowerCase().includes(searchTerm.toLowerCase()))
+        (org.phone && org.phone.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (org.domain && org.domain.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -64,10 +68,12 @@ export default function OrganizationsPage() {
   const handleCreate = () => {
     setEditingOrganization(null);
     setFormData({
+      nit: '',
       name: '',
       address: '',
       phone: '',
-      photoURL: ''
+      photoURL: '',
+      domain: ''
     });
     setShowModal(true);
   };
@@ -75,10 +81,12 @@ export default function OrganizationsPage() {
   const handleEdit = (organization: Organization) => {
     setEditingOrganization(organization);
     setFormData({
+      nit: organization.nit,
       name: organization.name,
       address: organization.address || '',
       phone: organization.phone || '',
-      photoURL: organization.photoURL || ''
+      photoURL: organization.photoURL || '',
+      domain: organization.domain || ''
     });
     setShowModal(true);
   };
@@ -238,7 +246,8 @@ export default function OrganizationsPage() {
               {/* Content */}
               <div className="p-6">
                 <h3 className="text-xl font-bold text-[#222831] mb-2 line-clamp-2">{org.name}</h3>
-                
+                <p className="text-sm text-gray-600 mb-3 font-medium">NIT: {org.nit}</p>
+
                 {org.address && (
                   <div className="flex items-start gap-2 mb-3">
                     <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
@@ -253,7 +262,14 @@ export default function OrganizationsPage() {
                       <span className="text-sm text-black">{org.phone}</span>
                     </div>
                   )}
-                  
+
+                  {org.domain && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-black">{org.domain}</span>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-gray-400" />
                     <span className="text-sm text-black font-medium">{getUserCount(org).toLocaleString()} miembros</span>
@@ -306,6 +322,21 @@ export default function OrganizationsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-black mb-2">
+                      NIT *
+                    </label>
+                    <input
+                      type="text"
+                      name="nit"
+                      value={formData.nit}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="Ej: 12345678-9"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFD369] focus:border-transparent transition-all duration-300 text-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-2">
                       Nombre *
                     </label>
                     <input
@@ -317,7 +348,9 @@ export default function OrganizationsPage() {
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFD369] focus:border-transparent transition-all duration-300 text-black"
                     />
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-black mb-2">
                       Teléfono
@@ -327,6 +360,20 @@ export default function OrganizationsPage() {
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFD369] focus:border-transparent transition-all duration-300 text-black"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-black mb-2">
+                      Dominio
+                    </label>
+                    <input
+                      type="text"
+                      name="domain"
+                      value={formData.domain}
+                      onChange={handleInputChange}
+                      placeholder="Ej: empresa.com"
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFD369] focus:border-transparent transition-all duration-300 text-black"
                     />
                   </div>
@@ -405,8 +452,8 @@ export default function OrganizationsPage() {
                     <div>
                       <h4 className="font-medium text-red-800 mb-1">¡Advertencia!</h4>
                       <p className="text-sm text-red-700">
-                        Esta organización puede tener miles de usuarios asociados. 
-                        Esta acción eliminará permanentemente la organización y puede afectar 
+                        Esta organización puede tener miles de usuarios asociados.
+                        Esta acción eliminará permanentemente la organización y puede afectar
                         a todos los usuarios vinculados.
                       </p>
                     </div>

@@ -2,25 +2,31 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_ORGANIZATIONS_API_BASE_URL;
 
 export interface Organization {
   id?: number;
+  nit: string;
   name: string;
   address?: string;
   phone?: string;
   photoURL?: string;
+  domain?: string;
   users?: any[];
 }
 
 export interface CreateOrganizationRequest {
+  nit: string;
   name: string;
   address?: string;
   phone?: string;
   photoURL?: string;
+  domain?: string;
 }
 
 export interface UpdateOrganizationRequest {
+  nit: string;
   name: string;
   address?: string;
   phone?: string;
   photoURL?: string;
+  domain?: string;
 }
 
 class OrganizationService {
@@ -29,17 +35,22 @@ class OrganizationService {
       const errorText = await response.text();
       throw new Error(`API Error: ${response.status} - ${errorText}`);
     }
-    
+
     if (response.status === 204) {
       return {} as T;
     }
-    
+
     return response.json();
   }
 
   async getAllOrganizations(): Promise<Organization[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/organizations`);
+      const response = await fetch(`${API_BASE_URL}/organizations`,
+        {
+          headers: {
+            'ngrok-skip-browser-warning': 'true',
+          }
+        });
       return this.handleResponse<Organization[]>(response);
     } catch (error) {
       console.error('Error fetching organizations:', error);
@@ -49,7 +60,12 @@ class OrganizationService {
 
   async getOrganizationById(id: number): Promise<Organization> {
     try {
-      const response = await fetch(`${API_BASE_URL}/organizations/${id}`);
+      const response = await fetch(`${API_BASE_URL}/organizations/${id}`,
+        {
+          headers: {
+            'ngrok-skip-browser-warning': 'true',
+          }
+        });
       return this.handleResponse<Organization>(response);
     } catch (error) {
       console.error(`Error fetching organization ${id}:`, error);
@@ -62,6 +78,7 @@ class OrganizationService {
       const response = await fetch(`${API_BASE_URL}/organizations`, {
         method: 'POST',
         headers: {
+          'ngrok-skip-browser-warning': 'true',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(organization),
@@ -78,6 +95,7 @@ class OrganizationService {
       const response = await fetch(`${API_BASE_URL}/organizations/${id}`, {
         method: 'PUT',
         headers: {
+          'ngrok-skip-browser-warning': 'true',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(organization),
@@ -93,6 +111,9 @@ class OrganizationService {
     try {
       const response = await fetch(`${API_BASE_URL}/organizations/${id}`, {
         method: 'DELETE',
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
       });
       await this.handleResponse<void>(response);
     } catch (error) {
@@ -103,7 +124,11 @@ class OrganizationService {
 
   async getUsersByOrganization(id: number): Promise<any[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/organizations/${id}/users`);
+      const response = await fetch(`${API_BASE_URL}/organizations/${id}/users`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
+      });
       return this.handleResponse<any[]>(response);
     } catch (error) {
       console.error(`Error fetching users for organization ${id}:`, error);
