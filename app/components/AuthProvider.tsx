@@ -42,9 +42,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setUser(userData);
         } catch (error) {
           // If getting user fails, token might be invalid
-          authService.logout();
-          setIsAuthenticated(false);
-          setUser(null);
+          //authService.logout();
+          //setIsAuthenticated(false);
+          //setUser(null);
         }
       } else {
         setUser(null);
