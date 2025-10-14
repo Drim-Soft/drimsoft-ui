@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_DRIMSOFT_API_BASE_URL;
+const API_BASE_URL = process.env.NEXT_PUBLIC_ORGANIZATIONS_API_BASE_URL;
 
 export interface Organization {
   id?: number;
