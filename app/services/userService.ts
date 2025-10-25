@@ -444,6 +444,51 @@ export const userService = {
     }
   },
 
+  // Obtener usuario por ID de Supabase
+  async getUserBySupabaseId(supabaseUserId: string): Promise<UserDrimsoft | null> {
+    const token = localStorage.getItem('authToken');
+    if (!token) throw new Error('No autenticado');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/users`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const users = await response.json();
+      
+      // Buscar el usuario con el supabaseUserId correspondiente
+      const user = users.find((u: any) => u.supabaseUserId === supabaseUserId);
+      
+      if (!user) {
+        return null;
+      }
+
+      // Mapear las propiedades del backend al frontend
+      return {
+        ...user,
+        id: user.idUser,
+        role: {
+          ...user.role,
+          id: user.role.idRole
+        },
+        status: {
+          ...user.status,
+          id: user.status.idUserStatus
+        }
+      };
+    } catch (error) {
+      return null;
+    }
+  },
+
   // Obtener roles disponibles
   getAvailableRoles(): Role[] {
     return [

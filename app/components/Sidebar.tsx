@@ -14,7 +14,8 @@ import {
     LogOut,
     ChevronLeft,
     ChevronRight,
-    UserCog
+    UserCog,
+    Ticket
 } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 
@@ -35,17 +36,16 @@ interface NavigationItem {
 const adminNavigation: NavigationItem[] = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, description: 'Panel principal' },
     { name: 'Organizaciones', href: '/organizations', icon: Building2, description: 'Gestionar organizaciones' },
-    { name: 'Usuarios', href: '/users', icon: Users, description: 'Gestionar usuarios' }
+    { name: 'Usuarios', href: '/users', icon: Users, description: 'Gestionar usuarios' },
+    { name: 'Tickets', href: '/tickets', icon: Ticket, description: 'Solicitudes de soporte' }
 ];
 
 const drimsoftNavigation: NavigationItem[] = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, description: 'Panel principal' },
-    { name: 'Organizaciones', href: '/organizations', icon: Building2, description: 'Gestionar organizaciones' }
+    { name: 'Organizaciones', href: '/organizations', icon: Building2, description: 'Gestionar organizaciones' },
+    { name: 'Tickets', href: '/tickets', icon: Ticket, description: 'Solicitudes de soporte' }
 ];
 
-// ----------------------------
-// 🌟 Componente principal
-// ----------------------------
 export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const pathname = usePathname();
     const { logout, user } = useAuth();
@@ -54,7 +54,6 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     let roleName = '';
     let navigationItems: NavigationItem[] = [];
 
-    // 🔹 Obtener rol desde contexto o localStorage
     if (user && user.role && typeof user.role === 'object') {
         roleId = user.role.id;
         roleName = user.role.name || '';
@@ -71,7 +70,6 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         }
     }
 
-    // 🔹 Asignar navegación según rol
     if (roleId === 1) {
         roleName = 'Administrador';
         navigationItems = adminNavigation;
