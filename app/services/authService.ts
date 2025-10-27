@@ -190,4 +190,62 @@ export const authService = {
     localStorage.removeItem('userRole');
     localStorage.removeItem('userName');
   },
+
+    async updateProfile(data: { name?: string; password?: string }) {
+        const token = localStorage.getItem('authToken');
+        if (!token) throw new Error('No autenticado');
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/update-profile`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(data),
+            });
+
+            const responseText = await response.text();
+
+            if (responseText.trim() === '') {
+                const friendlyMessage = getFriendlyErrorMessage(
+                    { message: 'El servidor devolvió una respuesta vacía' }
+                );
+                throw new Error(friendlyMessage);
+            }
+
+            let parsedData;
+            try {
+                parsedData = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Error al parsear respuesta JSON (updateProfile):', parseError);
+                const friendlyMessage = getFriendlyErrorMessage(parseError);
+                throw new Error(friendlyMessage);
+            }
+
+            if (!response.ok) {
+                console.error('Error en updateProfile - Status:', response.status, 'Data:', parsedData);
+                const technicalError =
+                    parsedData?.error ||
+                    parsedData?.message ||
+                    `Error del servidor (${response.status}: ${response.statusText})`;
+                const friendlyMessage = getFriendlyErrorMessage(technicalError, response.status);
+                throw new Error(friendlyMessage);
+            }
+
+            if (parsedData?.name) {
+                localStorage.setItem('userName', parsedData.name);
+            }
+
+            if (parsedData?.user) {
+                localStorage.setItem('user', JSON.stringify(parsedData.user));
+            }
+
+            return parsedData;
+        } catch (error: any) {
+            console.error('Error de red en updateProfile:', error);
+            const friendlyMessage = getFriendlyErrorMessage(error);
+            throw new Error(friendlyMessage);
+        }
+    },
 };

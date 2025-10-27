@@ -10,6 +10,7 @@ interface AuthContextType {
   user: any;
   login: (email: string, password: string) => Promise<any>;
   logout: () => void;
+  updateProfile: (data: { name?: string; password?: string }) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,34 +31,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAuthStatus();
   }, [pathname]);
 
-  const checkAuthStatus = async () => {
-    try {
-      const authenticated = authService.isAuthenticated();
-      setIsAuthenticated(authenticated);
-      
-      if (authenticated) {
-        // Try to get user data if authenticated
+    const checkAuthStatus = async () => {
         try {
-          const userData = await authService.getUser();
-          setUser(userData);
-        } catch (error) {
-          // If getting user fails, token might be invalid
-          //authService.logout();
-          //setIsAuthenticated(false);
-          //setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
-    } catch (error) {
-      setIsAuthenticated(false);
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+            const authenticated = authService.isAuthenticated();
+            setIsAuthenticated(authenticated);
 
-  // Route protection logic
+            if (authenticated) {
+                try {
+                    const userData = await authService.getUser();
+
+                    // Solo actualizar si aún no hay usuario cargado (o si cambió el id)
+                    setUser((prev: any) => {
+                        if (!prev || prev.id !== userData.id) {
+                            return userData;
+                        }
+                        // Si ya hay user en contexto, no lo sobreescribas (evita revertir nombre)
+                        return prev;
+                    });
+                } catch {
+                    /* Silenciar error del getUser si el token caduca */
+                }
+            } else {
+                setUser(null);
+            }
+        } catch {
+            setIsAuthenticated(false);
+            setUser(null);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
+    // Route protection logic
   useEffect(() => {
     if (isLoading) return; // Wait for auth check to complete
 
@@ -92,12 +98,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
     router.replace('/login');
   };
 
-  const value = {
+
+    const updateProfile = async (data: { name?: string; password?: string }) => {
+        try {
+            const updatedUser = await authService.updateProfile(data);
+
+            // 🔥 Actualiza inmediatamente el nombre visible sin depender de localStorage
+            setUser((prev: any) => {
+                if (!prev) return updatedUser.user?.db || updatedUser.db || updatedUser;
+
+                const newName =
+                    updatedUser?.name ||
+                    updatedUser?.db?.name ||
+                    updatedUser?.user?.db?.name ||
+                    prev.name;
+
+                return { ...prev, name: newName };
+            });
+
+            console.log('Nombre visualmente actualizado en contexto:', updatedUser);
+
+            return updatedUser;
+        } catch (error) {
+            console.error('Error al actualizar perfil:', error);
+            throw error;
+        }
+    };
+
+    const value = {
     isAuthenticated,
     isLoading,
     user,
     login,
     logout,
+    updateProfile,
   };
 
   return (
