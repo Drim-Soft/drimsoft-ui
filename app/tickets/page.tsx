@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Ticket } from '../types/ticket';
+import { Ticket, PagedTicketsResponse } from '../types/ticket';
 import { ticketService } from '../services/ticketService';
 import { userService } from '../services/userService';
 import { useAuth } from '../components/AuthProvider';
@@ -19,19 +19,86 @@ export default function TicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [drimsoftUserId, setDrimsoftUserId] = useState<number | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrevious, setHasPrevious] = useState(false);
+  // Search state
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Cargar tickets filtrados
-  const loadTickets = async () => {
+  // Cargar tickets paginados
+  const loadTickets = async (page: number = currentPage, size: number = pageSize, search: string = searchTerm) => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await ticketService.getAllTickets();
-      const filtered = data.filter((t: Ticket) => {
-        if (!t.iddrimsoftuser) return true; 
-        if (!drimsoftUserId) return false; 
-        return t.iddrimsoftuser === drimsoftUserId; 
-      });
-      setTickets(filtered);
+      
+      try {
+        // Intentar usar endpoint paginado con el size solicitado (evita doble click)
+        const pagedResponse: PagedTicketsResponse = await ticketService.getTicketsPaged(page, size, search);
+        
+        // Filtrar tickets según drimsoftUserId si está disponible
+        let filtered = pagedResponse.items.filter((t: Ticket) => {
+          if (!t.iddrimsoftuser) return true; 
+          if (!drimsoftUserId) return false; 
+          return t.iddrimsoftuser === drimsoftUserId; 
+        });
+        
+        // Aplicar búsqueda en cliente si llega sin filtrar desde backend
+        if (search && search.trim().length > 0) {
+          const q = search.trim().toLowerCase();
+          filtered = filtered.filter((t: Ticket) => {
+            const title = t.title?.toLowerCase() || '';
+            const desc = t.description?.toLowerCase() || '';
+            // equals ignore case OR contains (contains ya cubre equals)
+            return title.includes(q) || desc.includes(q);
+          });
+        }
+        
+        setTickets(filtered);
+        setCurrentPage(pagedResponse.page);
+        setTotalPages(pagedResponse.totalPages);
+        setTotalElements(pagedResponse.totalElements);
+        // Aseguramos que el estado pageSize refleje el usado realmente
+        setPageSize(pagedResponse.size ?? size);
+        setHasNext(pagedResponse.hasNext);
+        setHasPrevious(pagedResponse.hasPrevious);
+      } catch (paginationError) {
+        console.warn('Endpoint paginado no disponible, usando endpoint sin paginación:', paginationError);
+        
+        // Fallback: usar endpoint sin paginación
+        const allTickets = await ticketService.getAllTickets();
+        let filtered = allTickets.filter((t: Ticket) => {
+          if (!t.iddrimsoftuser) return true; 
+          if (!drimsoftUserId) return false; 
+          return t.iddrimsoftuser === drimsoftUserId; 
+        });
+        // Búsqueda local (case-insensitive contains)
+        if (search && search.trim().length > 0) {
+          const q = search.trim().toLowerCase();
+          filtered = filtered.filter((t: Ticket) => {
+            const title = t.title?.toLowerCase() || '';
+            const desc = t.description?.toLowerCase() || '';
+            return title.includes(q) || desc.includes(q);
+          });
+        }
+        
+        // Simular paginación en el cliente
+        const start = page * size;
+        const end = start + size;
+        const paginatedTickets = filtered.slice(start, end);
+        
+        setTickets(paginatedTickets);
+        setCurrentPage(page);
+        setTotalElements(filtered.length);
+        setTotalPages(Math.ceil(filtered.length / size));
+        setHasNext(end < filtered.length);
+        setHasPrevious(page > 0);
+        setPageSize(size);
+      }
     } catch (err) {
       console.error('Error al cargar tickets:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar los tickets');
@@ -39,6 +106,41 @@ export default function TicketsPage() {
       setIsLoading(false);
     }
   };
+
+  // Funciones de navegación de página
+  const handleNextPage = () => {
+    if (hasNext) {
+      loadTickets(currentPage + 1);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (hasPrevious) {
+      loadTickets(currentPage - 1);
+    }
+  };
+
+  const handleGoToPage = (page: number) => {
+    if (page >= 0 && page < totalPages) {
+      loadTickets(page);
+    }
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    // Reset a página 0 y carga inmediatamente con el nuevo size (sin necesitar segundo click)
+    setCurrentPage(0);
+    loadTickets(0, newSize);
+  };
+
+  // Debounce de búsqueda para evitar llamadas excesivas
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      // Reiniciar a primera página cuando cambie el término de búsqueda
+      loadTickets(0, pageSize, searchTerm);
+    }, 300);
+    return () => clearTimeout(handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
 
   useEffect(() => {
     const resolveDrimsoftId = async () => {
@@ -102,7 +204,7 @@ export default function TicketsPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-[#FFD369] rounded-xl">
                 <TicketIcon className="w-8 h-8 text-[#222831]" />
@@ -114,13 +216,34 @@ export default function TicketsPage() {
                 </p>
               </div>
             </div>
-            <button
-              onClick={loadTickets}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Actualizar
-            </button>
+            <div className="flex w-full md:w-auto items-center gap-3">
+              {/* Search Bar */}
+              <div className="flex-1 md:flex-initial relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Buscar por título o descripción..."
+                  className="w-full md:w-80 px-4 py-2 pr-10 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FFD369] focus:border-transparent"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    title="Limpiar búsqueda"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={() => loadTickets(0, pageSize, searchTerm)}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Actualizar
+              </button>
+            </div>
           </div>
         </div>
 
@@ -165,7 +288,21 @@ export default function TicketsPage() {
         )}
 
         {/* Tabla de tickets */}
-        <TicketsTable tickets={tickets} onViewTicket={handleViewTicket} />
+        <TicketsTable 
+          tickets={tickets} 
+          onViewTicket={handleViewTicket}
+          // Pagination props
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalElements={totalElements}
+          pageSize={pageSize}
+          hasNext={hasNext}
+          hasPrevious={hasPrevious}
+          onNextPage={handleNextPage}
+          onPreviousPage={handlePreviousPage}
+          onGoToPage={handleGoToPage}
+          onPageSizeChange={handlePageSizeChange}
+        />
 
         {/* Modal de detalle */}
         <TicketDetailModal

@@ -49,3 +49,14 @@ export const TICKET_STATUS = {
   ANSWERED: 3,
   CLOSED: 4,
 } as const;
+
+// Interface for paginated response
+export interface PagedTicketsResponse {
+  items: Ticket[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}

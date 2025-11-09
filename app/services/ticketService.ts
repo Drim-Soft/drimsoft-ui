@@ -1,4 +1,4 @@
-import { Ticket, TicketCreateRequest, TicketAnswerRequest, TicketAssignRequest, TicketMarkReadRequest } from '../types/ticket';
+import { Ticket, TicketCreateRequest, TicketAnswerRequest, TicketAssignRequest, TicketMarkReadRequest, PagedTicketsResponse } from '../types/ticket';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_DRIMSOFT_API_BASE_URL;
 
@@ -24,6 +24,65 @@ const getFriendlyErrorMessage = (error: any, context: string = 'operación'): st
 };
 
 export const ticketService = {
+  // Obtener tickets paginados
+  async getTicketsPaged(page: number = 0, size: number = 10, search?: string): Promise<PagedTicketsResponse> {
+    const token = localStorage.getItem('authToken');
+    if (!token) throw new Error('No autenticado');
+
+    try {
+      const params = new URLSearchParams({ page: String(page), size: String(size) });
+      if (search && search.trim().length > 0) {
+        params.append('query', search.trim());
+      }
+      const url = `${API_BASE_URL}/tickets/paged?${params.toString()}`;
+      console.log('Fetching paginated tickets from:', url);
+      
+      const response = await fetch(url, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        
+        let errorMessage = 'Error al obtener tickets';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+          errorMessage = `Error ${response.status}: ${response.statusText}`;
+        }
+        
+        const friendlyMessage = getFriendlyErrorMessage(errorMessage, 'cargar tickets');
+        throw new Error(friendlyMessage);
+      }
+
+      const data = await response.json();
+      console.log('Received paginated data:', data);
+      
+      // Validar que la respuesta tenga la estructura esperada
+      if (!data.items || !Array.isArray(data.items)) {
+        console.error('Invalid response structure:', data);
+        throw new Error('Formato de respuesta inválido del servidor');
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error in getTicketsPaged:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      const friendlyMessage = getFriendlyErrorMessage(error, 'cargar tickets');
+      throw new Error(friendlyMessage);
+    }
+  },
+
   // Obtener todos los tickets
   async getAllTickets(): Promise<Ticket[]> {
     const token = localStorage.getItem('authToken');
