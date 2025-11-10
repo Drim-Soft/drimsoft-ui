@@ -2,9 +2,9 @@
 
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { useState } from "react";
 import "./globals.css";
-import Sidebar from "./components/Sidebar";
+import { AuthProvider } from "./components/AuthProvider";
+import LayoutContent from "./components/LayoutContent";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,24 +21,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
   return (
     <html lang="es">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="flex min-h-screen bg-gray-50">
-          <Sidebar 
-            isCollapsed={sidebarCollapsed} 
-            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
-          />
-          <main className={`flex-1 overflow-y-auto transition-all duration-300 ${
-            sidebarCollapsed ? 'ml-16' : 'ml-64'
-          }`}>
-            {children}
-          </main>
-        </div>
+        <AuthProvider>
+          <LayoutContent>{children}</LayoutContent>
+        </AuthProvider>
       </body>
     </html>
   );

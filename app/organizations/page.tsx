@@ -13,6 +13,12 @@ export default function OrganizationsPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [filteredOrganizations, setFilteredOrganizations] = useState<Organization[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
+  // Paginación
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(12); // cards por página
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingOrganization, setEditingOrganization] = useState<Organization | null>(null);
@@ -25,42 +31,42 @@ export default function OrganizationsPage() {
     name: '',
     address: '',
     phone: '',
-    photoURL: ''
+    photoURL: '',
+    domain: ''
   });
 
-  // Load organizations on component mount
+  // Load organizations on component mount and when pagination or applied search changes
   useEffect(() => {
     loadOrganizations();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, size, appliedSearch]);
 
-  // Filter organizations based on search
+  // Backend filtered (mostrar tal cual llega)
   useEffect(() => {
-    let filtered = organizations;
-
-    if (searchTerm) {
-      filtered = filtered.filter(org =>
-        org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        org.nit.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (org.address && org.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (org.phone && org.phone.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    setFilteredOrganizations(filtered);
-  }, [organizations, searchTerm]);
+    setFilteredOrganizations(organizations);
+  }, [organizations]);
 
   const loadOrganizations = async () => {
     try {
       setInitialLoading(true);
       setError(null);
-      const data = await organizationService.getAllOrganizations();
-      setOrganizations(data);
+      // Usar el nuevo endpoint paginado con búsqueda opcional
+      const data = await organizationService.getOrganizationsPaginated(page, size, appliedSearch || undefined);
+      setOrganizations(data.content);
+      setTotalPages(data.totalPages);
+      setTotalElements(data.totalElements);
     } catch (error) {
       console.error('Error loading organizations:', error);
       setError('Error al cargar las organizaciones. Verifica que el backend esté ejecutándose.');
     } finally {
       setInitialLoading(false);
     }
+  };
+
+  const triggerSearch = () => {
+    const value = (searchTerm || '').trim();
+    setPage(0); // reiniciar a primera página en nueva búsqueda
+    setAppliedSearch(value);
   };
 
   const handleCreate = () => {
@@ -70,7 +76,8 @@ export default function OrganizationsPage() {
       name: '',
       address: '',
       phone: '',
-      photoURL: ''
+      photoURL: '',
+      domain: ''
     });
     setShowModal(true);
   };
@@ -82,7 +89,8 @@ export default function OrganizationsPage() {
       name: organization.name,
       address: organization.address || '',
       phone: organization.phone || '',
-      photoURL: organization.photoURL || ''
+      photoURL: organization.photoURL || '',
+      domain: organization.domain || ''
     });
     setShowModal(true);
   };
@@ -200,8 +208,16 @@ export default function OrganizationsPage() {
                   placeholder="Buscar organizaciones en Planifika..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') triggerSearch(); }}
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFD369] focus:border-transparent transition-all duration-300 text-black"
                 />
+                <button
+                  onClick={triggerSearch}
+                  disabled={loading}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#FFD369] text-[#222831] rounded-lg text-sm shadow hover:bg-[#FFD369]/90 disabled:opacity-50"
+                >
+                  Buscar
+                </button>
               </div>
             </div>
 
@@ -213,6 +229,75 @@ export default function OrganizationsPage() {
               <Plus className="w-5 h-5" />
               Nueva Organización
             </button>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-black">
+              Mostrando {organizations.length} de {totalElements} organizaciones
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-4 py-2 border border-gray-200 rounded-lg text-black disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <span className="text-black text-sm">Página {page + 1} de {Math.max(1, totalPages)}</span>
+              {/* Campo para ir a una página específica */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={Math.max(1, totalPages)}
+                  placeholder="Ir a..."
+                  className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-black"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const target = e.currentTarget as HTMLInputElement;
+                      const value = Number(target.value);
+                      if (!Number.isNaN(value)) {
+                        const clamped = Math.min(Math.max(1, value), Math.max(1, totalPages));
+                        setPage(clamped - 1);
+                      }
+                    }
+                  }}
+                />
+                <button
+                  onClick={(e) => {
+                    const container = (e.currentTarget.parentElement as HTMLElement);
+                    const input = container.querySelector('input[type="number"]') as HTMLInputElement | null;
+                    if (input) {
+                      const value = Number(input.value);
+                      if (!Number.isNaN(value)) {
+                        const clamped = Math.min(Math.max(1, value), Math.max(1, totalPages));
+                        setPage(clamped - 1);
+                      }
+                    }
+                  }}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-black"
+                >
+                  Ir
+                </button>
+              </div>
+              <button
+                onClick={() => setPage((p) => (totalPages ? Math.min(totalPages - 1, p + 1) : p + 1))}
+                disabled={totalPages ? page >= totalPages - 1 : organizations.length === 0}
+                className="px-4 py-2 border border-gray-200 rounded-lg text-black disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+              <select
+                className="ml-2 px-3 py-2 border border-gray-200 rounded-lg text-black"
+                value={size}
+                onChange={(e) => { setPage(0); setSize(parseInt(e.target.value)); }}
+              >
+                {[6, 12, 24, 48].map((opt) => (
+                  <option key={opt} value={opt}>{opt}/página</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -243,7 +328,7 @@ export default function OrganizationsPage() {
               <div className="p-6">
                 <h3 className="text-xl font-bold text-[#222831] mb-2 line-clamp-2">{org.name}</h3>
                 <p className="text-sm text-gray-600 mb-3 font-medium">NIT: {org.nit}</p>
-                
+
                 {org.address && (
                   <div className="flex items-start gap-2 mb-3">
                     <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
@@ -258,7 +343,14 @@ export default function OrganizationsPage() {
                       <span className="text-sm text-black">{org.phone}</span>
                     </div>
                   )}
-                  
+
+                  {org.domain && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-black">{org.domain}</span>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-gray-400" />
                     <span className="text-sm text-black font-medium">{getUserCount(org).toLocaleString()} miembros</span>
@@ -355,14 +447,14 @@ export default function OrganizationsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-black mb-2">
-                      URL de Foto
+                      Dominio
                     </label>
                     <input
-                      type="url"
-                      name="photoURL"
-                      value={formData.photoURL}
+                      type="text"
+                      name="domain"
+                      value={formData.domain}
                       onChange={handleInputChange}
-                      placeholder="https://ejemplo.com/foto.jpg"
+                      placeholder="Ej: empresa.com"
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFD369] focus:border-transparent transition-all duration-300 text-black"
                     />
                   </div>
@@ -427,8 +519,8 @@ export default function OrganizationsPage() {
                     <div>
                       <h4 className="font-medium text-red-800 mb-1">¡Advertencia!</h4>
                       <p className="text-sm text-red-700">
-                        Esta organización puede tener miles de usuarios asociados. 
-                        Esta acción eliminará permanentemente la organización y puede afectar 
+                        Esta organización puede tener miles de usuarios asociados.
+                        Esta acción eliminará permanentemente la organización y puede afectar
                         a todos los usuarios vinculados.
                       </p>
                     </div>
