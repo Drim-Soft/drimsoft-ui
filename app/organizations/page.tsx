@@ -304,7 +304,7 @@ export default function OrganizationsPage() {
         {/* Organizations Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredOrganizations.map((org) => (
-            <div key={org.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+            <div key={org.id || `org-${org.nit}`} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
               {/* Photo */}
               <div className="h-48 bg-gradient-to-br from-[#FFD369] to-[#FFD369]/80 relative overflow-hidden">
                 {org.photoURL ? (
@@ -469,20 +469,6 @@ export default function OrganizationsPage() {
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFD369] focus:border-transparent transition-all duration-300 text-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-black mb-2">
-                    URL de Foto
-                  </label>
-                  <input
-                    type="url"
-                    name="photoURL"
-                    value={formData.photoURL}
-                    onChange={handleInputChange}
-                    placeholder="https://ejemplo.com/foto.jpg"
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FFD369] focus:border-transparent transition-all duration-300 text-black"
                   />
                 </div>
