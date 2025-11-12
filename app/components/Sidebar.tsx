@@ -86,7 +86,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         <div
             className={`bg-gradient-to-b from-[#222831] to-[#1a1f26] text-white transition-all duration-300 ${
                 isCollapsed ? 'w-16' : 'w-64'
-            } min-h-screen flex flex-col shadow-2xl`}
+            } flex-shrink-0 h-screen flex flex-col shadow-2xl`}
         >
             {/* ---------------- Header ---------------- */}
             <div className="p-4 border-b border-gray-700">
@@ -145,7 +145,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             </div>
 
             {/* ---------------- Navigation ---------------- */}
-            <nav className="flex-1 p-4">
+            <nav className="flex-1 overflow-y-auto p-4">
                 <ul className="space-y-2">
                     {navigationItems.map((item) => {
                         const isActive = pathname === item.href;
