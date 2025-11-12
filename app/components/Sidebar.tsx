@@ -37,13 +37,15 @@ const adminNavigation: NavigationItem[] = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, description: 'Panel principal' },
     { name: 'Organizaciones', href: '/organizations', icon: Building2, description: 'Gestionar organizaciones' },
     { name: 'Usuarios', href: '/users', icon: Users, description: 'Gestionar usuarios' },
-    { name: 'Tickets', href: '/tickets', icon: Ticket, description: 'Solicitudes de soporte' }
+    { name: 'Tickets', href: '/tickets', icon: Ticket, description: 'Solicitudes de soporte' },
+    { name: 'Admins Planifika', href: '/planifika-admins', icon: Users, description: 'Administradores de organizaciones (Planifika)' }
 ];
 
 const drimsoftNavigation: NavigationItem[] = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, description: 'Panel principal' },
     { name: 'Organizaciones', href: '/organizations', icon: Building2, description: 'Gestionar organizaciones' },
-    { name: 'Tickets', href: '/tickets', icon: Ticket, description: 'Solicitudes de soporte' }
+    { name: 'Tickets', href: '/tickets', icon: Ticket, description: 'Solicitudes de soporte' },
+    { name: 'Admins Planifika', href: '/planifika-admins', icon: Users, description: 'Administradores de organizaciones (Planifika)' }
 ];
 
 export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {

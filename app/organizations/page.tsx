@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Eye, Building2, MapPin, Phone, Mail, Users, Calendar, AlertTriangle } from 'lucide-react';
 import { organizationService, Organization, CreateOrganizationRequest, UpdateOrganizationRequest } from '../services/organizationService';
+import { PLANIFIKA_USER_TYPES } from '../types/planifika';
+import { userService } from '../services/userService';
 
 // Helper function to get user count for display
 const getUserCount = (organization: Organization): number => {
@@ -34,6 +36,31 @@ export default function OrganizationsPage() {
     photoURL: '',
     domain: ''
   });
+  // Conteo real de usuarios por organización para las cards
+  const [usersCountByOrg, setUsersCountByOrg] = useState<Record<number, number>>({});
+  // Detalles
+  const [showDetails, setShowDetails] = useState(false);
+  const [detailsOrg, setDetailsOrg] = useState<Organization | null>(null);
+  const [detailsUsers, setDetailsUsers] = useState<any[]>([]);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+
+  const getPlanifikaRoleLabel = (user: any): string | undefined => {
+    const typeId = Number(user?.idUserType ?? user?.userType);
+    if (!Number.isFinite(typeId)) return undefined;
+    if (typeId === PLANIFIKA_USER_TYPES.ORG_ADMIN) return 'Administrador';
+    return 'Usuario';
+  };
+
+  const normalize = (value: unknown): string => {
+    if (typeof value !== 'string') return '';
+    return value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .replace(/\s+/g, '')
+      .trim();
+  };
 
   // Load organizations on component mount and when pagination or applied search changes
   useEffect(() => {
@@ -45,6 +72,36 @@ export default function OrganizationsPage() {
   useEffect(() => {
     setFilteredOrganizations(organizations);
   }, [organizations]);
+
+  // Al cambiar las organizaciones visibles, obtener el conteo real de usuarios
+  useEffect(() => {
+    const fetchCounts = async () => {
+      const orgsWithId = filteredOrganizations.filter((o) => typeof o.id === 'number') as Array<Required<Pick<Organization, 'id'>>> & Organization[];
+      const missing = orgsWithId.filter((o) => usersCountByOrg[o.id!] === undefined);
+      if (missing.length === 0) return;
+      try {
+        const entries = await Promise.all(
+          missing.map(async (o) => {
+            try {
+              const users = await organizationService.getUsersByOrganization(o.id!);
+              return [o.id!, Array.isArray(users) ? users.length : 0] as const;
+            } catch {
+              return [o.id!, 0] as const;
+            }
+          })
+        );
+        setUsersCountByOrg((prev) => {
+          const next = { ...prev };
+          for (const [id, count] of entries) next[id] = count;
+          return next;
+        });
+      } catch {
+        // sincrónicamente ignorar, las cards podrán seguir mostrando '-'
+      }
+    };
+    fetchCounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredOrganizations]);
 
   const loadOrganizations = async () => {
     try {
@@ -98,6 +155,104 @@ export default function OrganizationsPage() {
   const handleDelete = (organization: Organization) => {
     setDeletingOrganization(organization);
     setShowDeleteModal(true);
+  };
+
+  const handleViewDetails = async (organization: Organization) => {
+    setDetailsOrg(organization);
+    setDetailsUsers([]);
+    setDetailsError(null);
+    setShowDetails(true);
+    if (!organization.id) return;
+    try {
+      setDetailsLoading(true);
+      const users = await organizationService.getUsersByOrganization(organization.id);
+      const baseUsers = Array.isArray(users) ? users : [];
+
+      // Intentar enriquecer con rol desde el servicio de usuarios (Drimsoft)
+      try {
+        const drUsers = await userService.getAllUsers();
+        const byId = new Map<number, any>();
+        const byEmail = new Map<string, any>();
+        const bySupabase = new Map<string, any>();
+        const byName = new Map<string, any[]>(); // pueden existir duplicados con mismo nombre
+
+        for (const du of drUsers) {
+          const id = Number((du as any).id ?? (du as any).idUser);
+          if (Number.isFinite(id)) byId.set(id, du);
+          const email = String((du as any).email || '').toLowerCase().trim();
+          if (email) byEmail.set(email, du);
+          const supId = (du as any).supabaseUserId;
+          if (typeof supId === 'string' && supId) bySupabase.set(supId, du);
+          const nName = normalize((du as any).name);
+          if (nName) {
+            const list = byName.get(nName) || [];
+            list.push(du);
+            byName.set(nName, list);
+          }
+        }
+
+        const normalized = baseUsers.map((u: any) => {
+          const candidateIds = [
+            Number(u?.id),
+            Number(u?.idUser),
+            Number(u?.userId),
+          ].filter((n) => Number.isFinite(n)) as number[];
+
+          const candidateEmails = [
+            u?.email,
+            u?.username,
+            u?.mail,
+            u?.correo,
+            u?.emailAddress,
+          ]
+            .map((e: any) => (typeof e === 'string' ? e.toLowerCase().trim() : ''))
+            .filter(Boolean);
+
+          const candidateSupabase = typeof u?.supabaseUserId === 'string' ? u.supabaseUserId : undefined;
+          const candidateNames = [
+            u?.name,
+            u?.fullName,
+            `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim(),
+          ]
+            .map((n: any) => normalize(n))
+            .filter(Boolean);
+
+          let matched: any | undefined;
+
+          for (const id of candidateIds) {
+            if (byId.has(id)) { matched = byId.get(id); break; }
+          }
+          if (!matched) {
+            for (const em of candidateEmails) {
+              if (byEmail.has(em)) { matched = byEmail.get(em); break; }
+            }
+          }
+          if (!matched && candidateSupabase && bySupabase.has(candidateSupabase)) {
+            matched = bySupabase.get(candidateSupabase);
+          }
+          if (!matched) {
+            for (const nn of candidateNames) {
+              const list = byName.get(nn);
+              if (list && list.length === 1) { matched = list[0]; break; }
+            }
+          }
+
+          if (matched?.role?.name) {
+            return { ...u, drimsoftRoleName: matched.role.name };
+          }
+          return u;
+        });
+
+        setDetailsUsers(normalized);
+      } catch (mapErr) {
+        // Si falla la obtención/mapeo de Drimsoft, igual mostramos los usuarios base
+        setDetailsUsers(baseUsers);
+      }
+    } catch (e: any) {
+      setDetailsError(e?.message || 'Error al cargar usuarios de la organización');
+    } finally {
+      setDetailsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -353,12 +508,23 @@ export default function OrganizationsPage() {
 
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-black font-medium">{getUserCount(org).toLocaleString()} miembros</span>
+                    <span className="text-sm text-black font-medium">
+                      {typeof org.id === 'number' && usersCountByOrg[org.id] !== undefined
+                        ? `${usersCountByOrg[org.id].toLocaleString()} miembros`
+                        : '— miembros'}
+                    </span>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-4 border-t border-gray-100">
+                  <button
+                    onClick={() => handleViewDetails(org)}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 text-[#222831] rounded-lg hover:bg-gray-50 transition-colors duration-200 font-medium"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Ver
+                  </button>
                   <button
                     onClick={() => handleEdit(org)}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#FFD369] text-[#222831] rounded-lg hover:bg-[#FFD369]/90 transition-colors duration-200 font-medium"
@@ -541,6 +707,123 @@ export default function OrganizationsPage() {
                   >
                     {loading ? 'Eliminando...' : 'Eliminar'}
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Details Modal */}
+        {showDetails && detailsOrg && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-gradient-to-r from-[#FFD369] to-[#FFD369]/80 rounded-xl">
+                    <Building2 className="w-6 h-6 text-[#222831]" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-[#222831]">{detailsOrg.name}</h2>
+                    <p className="text-sm text-gray-600">NIT: {detailsOrg.nit}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setShowDetails(false); setDetailsOrg(null); }}
+                  className="px-4 py-2 text-black border border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-300"
+                >
+                  Cerrar
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-6">
+                {/* Org summary */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-1">
+                    <div className="h-40 bg-gradient-to-br from-[#FFD369] to-[#FFD369]/80 rounded-xl overflow-hidden flex items-center justify-center">
+                      {detailsOrg.photoURL ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={detailsOrg.photoURL} alt={detailsOrg.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Building2 className="w-14 h-14 text-white" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="md:col-span-2 space-y-3">
+                    {detailsOrg.address && (
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+                        <span className="text-sm text-black">{detailsOrg.address}</span>
+                      </div>
+                    )}
+                    {detailsOrg.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-black">{detailsOrg.phone}</span>
+                      </div>
+                    )}
+                    {detailsOrg.domain && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-black">{detailsOrg.domain}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-black font-medium">
+                        {detailsUsers.length} miembros (listado detallado abajo)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Users list */}
+                <div>
+                  <h3 className="text-lg font-semibold text-[#222831] mb-3 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-gray-600" />
+                    Usuarios de la organización
+                  </h3>
+
+                  {detailsError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                      {detailsError}
+                    </div>
+                  )}
+
+                  {detailsLoading ? (
+                    <div className="flex items-center gap-3 text-black">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#FFD369]"></div>
+                      Cargando usuarios...
+                    </div>
+                  ) : (
+                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                      <div className="max-h-[40vh] overflow-y-auto">
+                        <table className="min-w-full">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="text-left text-xs font-medium text-gray-600 uppercase tracking-wider px-4 py-3">Nombre</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {detailsUsers.length === 0 ? (
+                              <tr>
+                                <td colSpan={1} className="px-4 py-6 text-center text-black">No hay usuarios para esta organización</td>
+                              </tr>
+                            ) : (
+                              detailsUsers.map((u, idx) => (
+                                <tr key={u.id || u.idUser || idx} className="hover:bg-gray-50">
+                                  <td className="px-4 py-3 text-sm text-black">
+                                    {u.name || u.fullName || `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || '-'}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
