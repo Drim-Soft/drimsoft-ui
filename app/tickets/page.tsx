@@ -68,6 +68,10 @@ export default function TicketsPage() {
         setHasPrevious(pagedResponse.hasPrevious);
       } catch (paginationError) {
         console.warn('Endpoint paginado no disponible, usando endpoint sin paginación:', paginationError);
+        if (paginationError instanceof Error && (paginationError.message === 'AUTH_401' || paginationError.message.includes('401'))) {
+          router.push('/login');
+          return;
+        }
         
         // Fallback: usar endpoint sin paginación
         const allTickets = await ticketService.getAllTickets();
@@ -101,6 +105,10 @@ export default function TicketsPage() {
       }
     } catch (err) {
       console.error('Error al cargar tickets:', err);
+      if (err instanceof Error && (err.message === 'AUTH_401' || err.message.includes('401'))) {
+        router.push('/login');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Error al cargar los tickets');
     } finally {
       setIsLoading(false);

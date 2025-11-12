@@ -48,6 +48,16 @@ export const ticketService = {
       console.log('Response status:', response.status);
 
       if (!response.ok) {
+        if (response.status === 401) {
+          // Limpieza de sesión ante token inválido/expirado y señal para redirigir
+          try {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
+          } catch {}
+          throw new Error('AUTH_401');
+        }
         const errorText = await response.text();
         console.error('Error response:', errorText);
         
@@ -98,6 +108,14 @@ export const ticketService = {
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          try {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
+          } catch {}
+        }
         const friendlyMessage = getFriendlyErrorMessage('Error al obtener tickets', 'cargar tickets');
         throw new Error(friendlyMessage);
       }
